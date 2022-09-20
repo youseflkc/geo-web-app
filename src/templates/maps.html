@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Map Selection Tool</title>
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.4.1/jquery.min.js"></script>
+
+    <script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyDzlFdmDuoCWTbaEiy7u8bIbz0aB8TIyjo&libraries=drawing&callback=initMap"
+            async defer></script>
+
+    <meta name="viewport" content="initial-scale=1.0, user-scalable=no">
+    <meta charset="utf-8">
+    <style>
+
+        #map {
+            height: 70%
+        }
+
+        html, body {
+            height: 100%;
+            margin: 2%;
+            padding: 2%;
+        }
+
+
+    </style>
+</head>
+<body>
+<div id="map"></div>
+
+<script>
+
+    function initMap() {
+        var map = new google.maps.Map(document.getElementById('map'), {
+            center: {lat: 42.9843887, lng: -81.262251},
+            zoom: 13
+        });
+
+        var drawingManager = new google.maps.drawing.DrawingManager({
+            drawingMode: google.maps.drawing.OverlayType.null,
+            drawingControl: true,
+            drawingControlOptions: {
+                drawingModes: ['polygon', 'rectangle', 'circle', 'marker']
+            }
+
+        });
+
+        drawingManager.setMap(map);
+
+        //reads long and lat coordinates whenever polygon is drawn.
+        google.maps.event.addListener(drawingManager, 'overlaycomplete', function (event) {
+            if (event.type === 'polygon') {
+                shapeLat=[];
+                shapeLng=[];
+                var polygon = event.overlay;
+                for (var i = 0; i < polygon.getPath().getLength(); i++) {
+                    var lat = polygon.getPath().getAt(i).lat();
+                    var lng = polygon.getPath().getAt(i).lng();
+                    shapeLat.push(lat);
+                    shapeLng.push(lng);
+                }
+
+            }
+        });
+    }
+
+    //when save button is clicked, this function retrieves the coordinates and sends them to the server
+    $(document).ready(function () {
+        $('form').on('submit', function (event) {
+            event.preventDefault();
+            $.ajax({
+                data: {shapeLatitude: shapeLat, shapeLong:shapeLng},
+                type: 'POST',
+                url: '/saveshape'
+            })
+                .done(function (data) {
+                    if (data.error) {
+                        $('#error').text(data.error).show();
+                        $('#success').hide();
+                    } else {
+                        $('#success').text(data.success).show();
+                        $('#error').hide();
+                    }
+
+                });
+        });
+
+    });
+
+</script>
+
+
+<form>
+    <button type="submit">Save Shape</button>
+
+    <div id="success"></div>
+    <div id="error"></div>
+</form>
+
+
+</body>
+</html>
